@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const {ObjectID} = require('mongodb');
+const _ = require('lodash');
 
 const {mongoose} = require('./db/mongoose.js');
 const {Todo} = require('./models/todo.js');
@@ -90,6 +91,45 @@ app.delete('/todos/:id', (req, res) => {
         }
 
         res.send({status: 'OK', deletedTodo});
+    }, (err) => {
+        res.status(400).send({status: 'ERROR', err});
+    });
+});
+
+// DELETE /todos/:id
+// Deletes todo with given ID
+app.patch('/todos/:id', (req, res) => {
+    var id = req.params.id;
+    var body = _.pick(req.body, ['text', 'completed']);
+
+    if(!ObjectID.isValid(id)) {
+        return res.status(400).send({
+            status: 'ERROR',
+            err: {
+                message: 'Given ID is not valid.'
+            }
+        });
+    }
+
+    if(_.isBoolean(body.completed) && body.completed)
+    {
+        body.completedAt = Date.now();
+    } else {
+        body.completed = false;
+        body.completedAt = null;
+    }
+
+    Todo.findByIdAndUpdate(id, {$set: body}, {new: true}).then((todo) => {
+        if(!todo) {
+            return res.status(404).send({
+                status: 'NOT_FOUND', 
+                err: {
+                    message: `Could not find todo with id: ${id}`
+                }
+            }); 
+        }
+
+        res.send({status: 'OK', todo});
     }, (err) => {
         res.status(400).send({status: 'ERROR', err});
     });
