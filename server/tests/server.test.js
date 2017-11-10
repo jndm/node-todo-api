@@ -23,6 +23,8 @@ beforeEach((done) => {
     });
 });
 
+//
+// POST /todos/:id
 describe('POST /todos', () => {
     it('should create a new todo', (done) => {
         var text = 'Test todo text';
@@ -72,6 +74,8 @@ describe('POST /todos', () => {
     });
 });
 
+//
+// DELETE /todos
 describe('GET /todos', () => {
     it('should get all todos', (done) => {
         request(app)
@@ -84,6 +88,8 @@ describe('GET /todos', () => {
     });
 });
 
+//
+// GET /todos/:id
 describe('GET /todos/:id', () => {
     it('should return todo doc', (done) => {
         request(app)
@@ -108,6 +114,50 @@ describe('GET /todos/:id', () => {
     it('should return not found (404)', (done) => {
         request(app)
             .get(`/todos/${new ObjectID()}`)
+            .expect(404)
+            .expect((res) => {
+                expect(res.body.status).toBe('NOT_FOUND');
+            })
+            .end(done);
+    });
+});
+
+//
+// DELETE /todos/:id
+describe('DELETE /todos/:id', () => {
+    it('should return todo doc', (done) => {
+        request(app)
+            .delete(`/todos/${todos[0]._id}`)
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.status).toBe('OK');
+                expect(res.body.deletedTodo._id).toBe(todos[0]._id.toHexString());
+            })
+            .end((err, res) => {
+                if(err) {
+                    return done(err);
+                }
+
+                Todo.findById(todos[0]._id).then((todo) => {
+                    expect(todo).toBe(null);
+                    done();
+                }).catch(done);
+            }); 
+    });
+
+    it('should return invalid id (400)', (done) => {
+        request(app)
+            .delete('/todos/123')
+            .expect(400)
+            .expect((res) => {
+                expect(res.body.status).toBe('ERROR');
+            })
+            .end(done);
+    });
+
+    it('should return not found (404)', (done) => {
+        request(app)
+            .delete(`/todos/${new ObjectID()}`)
             .expect(404)
             .expect((res) => {
                 expect(res.body.status).toBe('NOT_FOUND');
