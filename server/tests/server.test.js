@@ -4,30 +4,11 @@ const { ObjectID } = require('mongodb');
 
 const { app } = require('./../server.js');
 const { Todo } = require('./../models/todo.js');
+const { User } = require('./../models/user.js');
+const { todos, users, populateTodos, populateUsers } = require('./seed/seed.js');
 
-var completedTimeStamp = Date.now();
-
-var todos = [
-    { _id: new ObjectID(), text: 'First test todo' },
-    {
-        _id: new ObjectID(), text: 'Second test todo',
-        completed: true,
-        completedAt: completedTimeStamp
-    }
-]
-
-beforeEach((done) => {
-    Todo.remove({}).then(() => {
-        return Todo.insertMany(todos);
-    }, (err) => {
-        console.log('Could not clear todos before testing.', err);
-    })
-        .then(() => {
-            done();
-        }, (err) => {
-            console.log('Unable to seed todos before testing.', err);
-        });
-});
+beforeEach(populateUsers);
+beforeEach(populateTodos);
 
 //
 // POST /todos/:id
@@ -180,9 +161,9 @@ describe('PATCH /todos/:id', () => {
 
         request(app)
             .patch(`/todos/${todos[0]._id}`)
-            .send({ 
-                text: updatedText, 
-                completed: true 
+            .send({
+                text: updatedText,
+                completed: true
             })
             .expect(200)
             .end((err, res) => {
@@ -192,7 +173,7 @@ describe('PATCH /todos/:id', () => {
                 Todo.findById(todos[0]._id).then((todo) => {
                     expect(todo.text).toBe(updatedText);
                     expect(todo.completed).toBe(true);
-                    expect(typeof(todo.completedAt)).toBe('object');
+                    expect(typeof (todo.completedAt)).toBe('object');
                     done();
                 }, (err) => {
                     console.log('Error at fetching todos.')
@@ -205,9 +186,9 @@ describe('PATCH /todos/:id', () => {
         var updatedText = 'not yet completed';
         request(app)
             .patch(`/todos/${todos[1]._id}`)
-            .send({ 
-                text: updatedText, 
-                completed: false 
+            .send({
+                text: updatedText,
+                completed: false
             })
             .expect(200)
             .end((err, res) => {
@@ -224,5 +205,94 @@ describe('PATCH /todos/:id', () => {
                 })
                     .catch((e) => { done(e) });
             });
+    });
+});
+
+//
+// GET /users/me
+describe('GET /users/me', () => {
+    it('should return user if authenticated', (done) => {
+        request(app)
+            .get('/users/me')
+            .set('x-auth', users[0].tokens[0].token)
+            .expect(200)
+            .expect((res) => {
+                expect(res.body._id).toBe(users[0]._id.toHexString());
+                expect(res.body.email).toBe(users[0].email);
+            })
+            .end(done);
+    });
+
+    it('should return 401 if not authenticated', (done) => {
+        request(app)
+            .get('/users/me')
+            .expect(401)
+            .expect((res) => {
+                expect(res.body).toEqual({});
+            })
+            .end(done);
+    });
+});
+
+//
+// POST /users/
+describe('POST /users', () => {
+    it('should create a user', (done) => {
+        var email = 'c@example.com';
+        var password = 'userThreePass';
+
+        request(app)
+            .post('/users')
+            .send({email, password})
+            .expect(201)
+            .expect((res) => {
+                expect(typeof(res.headers['x-auth'])).toBeTruthy();
+                expect(typeof(res.body._id)).toBeTruthy();
+                expect(res.body.email).toBe(email);
+            })
+            .end((err) => {
+                if(err) {
+                    return done(err);
+                }
+                
+                User.findOne({email}).then((user) => {
+                    expect(user).toBeTruthy();
+                    expect(user.password).not.toBe(password);
+                    done();
+                })
+                .catch((e) => done(e));
+            });
+    });
+
+    it('should return validation errors if request invalid', (done) => {
+        var email = 'dATexample.com';
+        var password = 'userInvalidPass';
+
+        request(app)
+            .post('/users')
+            .send({email, password})
+            .expect(400)
+            .end(done);
+    });
+
+    it('should not create user if email is in use', (done) => {
+        var id = new ObjectID();
+        var password = 'userTestingPass';
+
+        request(app)
+        .post('/users')
+        .send({_id: id, email: users[0].email, password})
+        .expect(400)
+        .end((err) => {
+            if(err) {
+                return done(err);
+            }
+            
+            User.findOne({id}).then((user) => {
+                expect(user).toBeFalsy();
+                done();
+            })
+            .catch((e) => done(e));
+        });
     });
 });
