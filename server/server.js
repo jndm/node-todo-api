@@ -1,13 +1,13 @@
 require('./config/config.js');
 const express = require('express');
 const bodyParser = require('body-parser');
-const {ObjectID} = require('mongodb');
+const { ObjectID } = require('mongodb');
 const _ = require('lodash');
 
-const {mongoose} = require('./db/mongoose.js');
-const {Todo} = require('./models/todo.js');
-const {User} = require('./models/user.js');
-const {authenticate} = require('./middleware/authenticate.js');
+const { mongoose } = require('./db/mongoose.js');
+const { Todo } = require('./models/todo.js');
+const { User } = require('./models/user.js');
+const { authenticate } = require('./middleware/authenticate.js');
 
 var app = express();
 
@@ -31,8 +31,8 @@ app.post('/todos', (req, res) => {
 // Returns all todos
 app.get('/todos', (req, res) => {
     Todo.find().then((todos) => {
-        res.send({status: 'OK', todos});
-    }, (err) => { 
+        res.send({ status: 'OK', todos });
+    }, (err) => {
         res.status(400).send(err);
     });
 });
@@ -43,7 +43,7 @@ app.get('/todos/:id', (req, res) => {
 
     var id = req.params.id;
 
-    if(!ObjectID.isValid(id)) {
+    if (!ObjectID.isValid(id)) {
         return res.status(400).send({
             status: 'ERROR',
             err: {
@@ -52,19 +52,19 @@ app.get('/todos/:id', (req, res) => {
         });
     }
 
-    Todo.findById(req.params.id).then((todo) => {       
-        if(!todo) {
+    Todo.findById(req.params.id).then((todo) => {
+        if (!todo) {
             return res.status(404).send({
-                status: 'NOT_FOUND', 
+                status: 'NOT_FOUND',
                 err: {
                     message: `Could not find todo with id: ${id}`
                 }
             });
         }
 
-        res.send({status: 'OK', todo});
+        res.send({ status: 'OK', todo });
     }, (err) => {
-        res.status(400).send({status: 'ERROR', err});
+        res.status(400).send({ status: 'ERROR', err });
     });
 });
 
@@ -72,8 +72,8 @@ app.get('/todos/:id', (req, res) => {
 // Deletes todo with given ID
 app.delete('/todos/:id', (req, res) => {
     var id = req.params.id;
-    
-    if(!ObjectID.isValid(id)) {
+
+    if (!ObjectID.isValid(id)) {
         return res.status(400).send({
             status: 'ERROR',
             err: {
@@ -83,18 +83,18 @@ app.delete('/todos/:id', (req, res) => {
     }
 
     Todo.findByIdAndRemove(id).then((deletedTodo) => {
-        if(!deletedTodo) {
+        if (!deletedTodo) {
             return res.status(404).send({
-                status: 'NOT_FOUND', 
+                status: 'NOT_FOUND',
                 err: {
                     message: `Could not find todo with id: ${id}`
                 }
-            }); 
+            });
         }
 
-        res.send({status: 'OK', deletedTodo});
+        res.send({ status: 'OK', deletedTodo });
     }, (err) => {
-        res.status(400).send({status: 'ERROR', err});
+        res.status(400).send({ status: 'ERROR', err });
     });
 });
 
@@ -104,7 +104,7 @@ app.patch('/todos/:id', (req, res) => {
     var id = req.params.id;
     var body = _.pick(req.body, ['text', 'completed']);
 
-    if(!ObjectID.isValid(id)) {
+    if (!ObjectID.isValid(id)) {
         return res.status(400).send({
             status: 'ERROR',
             err: {
@@ -113,27 +113,26 @@ app.patch('/todos/:id', (req, res) => {
         });
     }
 
-    if(_.isBoolean(body.completed) && body.completed)
-    {
+    if (_.isBoolean(body.completed) && body.completed) {
         body.completedAt = Date.now();
     } else {
         body.completed = false;
         body.completedAt = null;
     }
 
-    Todo.findByIdAndUpdate(id, {$set: body}, {new: true}).then((todo) => {
-        if(!todo) {
+    Todo.findByIdAndUpdate(id, { $set: body }, { new: true }).then((todo) => {
+        if (!todo) {
             return res.status(404).send({
-                status: 'NOT_FOUND', 
+                status: 'NOT_FOUND',
                 err: {
                     message: `Could not find todo with id: ${id}`
                 }
-            }); 
+            });
         }
 
-        res.send({status: 'OK', todo});
+        res.send({ status: 'OK', todo });
     }, (err) => {
-        res.status(400).send({status: 'ERROR', err});
+        res.status(400).send({ status: 'ERROR', err });
     });
 });
 
@@ -147,16 +146,33 @@ app.post('/users', (req, res) => {
     user.save(user).then(() => {
         return user.generateAuthToken();
     })
-    .then((token) => {
-        res.header('x-auth', token).status(201).send(user);
-    })
-    .catch((err) => {
-        res.status(400).send(err);
-    });
+        .then((token) => {
+            res.header('x-auth', token).status(201).send(user);
+        })
+        .catch((err) => {
+            res.status(400).send(err);
+        });
 });
 
+// GET /users/me
+// Gets logged in user information
 app.get('/users/me', authenticate, (req, res) => {
     res.send(req.user);
+});
+
+// POST /users/login
+// Login route
+app.post('/users/login', (req, res) => {
+    var userData = _.pick(req.body, ['email', 'password']);
+
+    User.findByCredentials(userData.email, userData.password)
+        .then((user) => {
+            user.generateAuthToken().then((token) => {
+                res.header('x-auth', token).status(201).send(user);
+            });
+        }).catch((err) => {
+            res.status(400).send();
+        });
 });
 
 const port = process.env.PORT;
@@ -165,4 +181,4 @@ app.listen(port, () => {
     console.log(`Server running on port ${port}`);
 });
 
-module.exports = {app};
+module.exports = { app };
