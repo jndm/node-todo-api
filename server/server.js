@@ -143,9 +143,13 @@ app.post('/users', (req, res) => {
 
     var user = new User(userData);
 
-    user.save(user).then((user) => {
-        res.status(201).send(user);
-    }, (err) => {
+    user.save(user).then(() => {
+        return user.generateAuthToken();
+    })
+    .then((token) => {
+        res.header('x-auth', token).status(201).send(user);
+    })
+    .catch((err) => {
         res.status(400).send(err);
     });
 });
