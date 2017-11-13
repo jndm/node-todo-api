@@ -1,13 +1,19 @@
 const expect = require('expect');
 const request = require('supertest');
-const {ObjectID} = require('mongodb');
+const { ObjectID } = require('mongodb');
 
-const {app} = require('./../server.js');
-const {Todo} = require('./../models/todo.js');
+const { app } = require('./../server.js');
+const { Todo } = require('./../models/todo.js');
+
+var completedTimeStamp = Date.now();
 
 var todos = [
-    {_id: new ObjectID(), text: 'First test todo'}, 
-    {_id: new ObjectID(), text: 'Second test todo'}
+    { _id: new ObjectID(), text: 'First test todo' },
+    {
+        _id: new ObjectID(), text: 'Second test todo',
+        completed: true,
+        completedAt: completedTimeStamp
+    }
 ]
 
 beforeEach((done) => {
@@ -16,11 +22,11 @@ beforeEach((done) => {
     }, (err) => {
         console.log('Could not clear todos before testing.', err);
     })
-    .then(() => {
-        done();
-    }, (err) => {
-        console.log('Unable to seed todos before testing.', err);
-    });
+        .then(() => {
+            done();
+        }, (err) => {
+            console.log('Unable to seed todos before testing.', err);
+        });
 });
 
 //
@@ -31,13 +37,13 @@ describe('POST /todos', () => {
 
         request(app)
             .post('/todos')
-            .send({text})
+            .send({ text })
             .expect(201)
             .expect((res) => {
                 expect(res.body.text).toBe(text);
             })
             .end((err, res) => {
-                if(err) {
+                if (err) {
                     return done(err);
                 }
                 Todo.find().then((todos) => {
@@ -47,7 +53,7 @@ describe('POST /todos', () => {
                 }, (err) => {
                     console.log('Error at fetching todos.')
                 })
-                .catch((e) => { done(e) });
+                    .catch((e) => { done(e) });
             });
     });
 
@@ -60,7 +66,7 @@ describe('POST /todos', () => {
                 expect(res.body.text).toBe(undefined);
             })
             .end((err, res) => {
-                if(err) {
+                if (err) {
                     return done(err);
                 }
                 Todo.find().then((todos) => {
@@ -69,7 +75,7 @@ describe('POST /todos', () => {
                 }, (err) => {
                     console.log('Error at fetching todos.')
                 })
-                .catch((e) => { done(e) });
+                    .catch((e) => { done(e) });
             })
     });
 });
@@ -134,7 +140,7 @@ describe('DELETE /todos/:id', () => {
                 expect(res.body.deletedTodo._id).toBe(todos[0]._id.toHexString());
             })
             .end((err, res) => {
-                if(err) {
+                if (err) {
                     return done(err);
                 }
 
@@ -142,7 +148,7 @@ describe('DELETE /todos/:id', () => {
                     expect(todo).toBe(null);
                     done();
                 }).catch(done);
-            }); 
+            });
     });
 
     it('should return invalid id (400)', (done) => {
@@ -163,5 +169,60 @@ describe('DELETE /todos/:id', () => {
                 expect(res.body.status).toBe('NOT_FOUND');
             })
             .end(done);
+    });
+});
+
+//
+// PATCH /todos/:id
+describe('PATCH /todos/:id', () => {
+    it('should update the todo', (done) => {
+        var updatedText = 'updated text 1';
+
+        request(app)
+            .patch(`/todos/${todos[0]._id}`)
+            .send({ 
+                text: updatedText, 
+                completed: true 
+            })
+            .expect(200)
+            .end((err, res) => {
+                if (err) {
+                    return done(err);
+                }
+                Todo.findById(todos[0]._id).then((todo) => {
+                    expect(todo.text).toBe(updatedText);
+                    expect(todo.completed).toBe(true);
+                    expect(typeof(todo.completedAt)).toBe('object');
+                    done();
+                }, (err) => {
+                    console.log('Error at fetching todos.')
+                })
+                    .catch((e) => { done(e) });
+            });
+    });
+
+    it('should clear completedAt when todo is not completed', (done) => {
+        var updatedText = 'not yet completed';
+        request(app)
+            .patch(`/todos/${todos[1]._id}`)
+            .send({ 
+                text: updatedText, 
+                completed: false 
+            })
+            .expect(200)
+            .end((err, res) => {
+                if (err) {
+                    return done(err);
+                }
+                Todo.findById(todos[1]._id).then((todo) => {
+                    expect(todo.text).toBe(updatedText);
+                    expect(todo.completed).toBe(false);
+                    expect(todo.completedAt).toBe(null);
+                    done();
+                }, (err) => {
+                    console.log('Error at fetching todos.')
+                })
+                    .catch((e) => { done(e) });
+            });
     });
 });
