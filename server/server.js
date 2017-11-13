@@ -136,6 +136,20 @@ app.patch('/todos/:id', (req, res) => {
     });
 });
 
+// POST /users
+// Adds user
+app.post('/users', (req, res) => {
+    var userData = _.pick(req.body, ['email', 'password']);
+
+    var user = new User(userData);
+
+    user.save(user).then((user) => {
+        res.status(201).send(user);
+    }, (err) => {
+        res.status(400).send(err);
+    });
+});
+
 const port = process.env.PORT;
 
 app.listen(port, () => {
