@@ -15,9 +15,10 @@ app.use(bodyParser.json());
 
 // POST /todos
 // Add new todo
-app.post('/todos', (req, res) => {
+app.post('/todos', authenticate, (req, res) => {
     var todo = new Todo({
-        text: req.body.text
+        text: req.body.text,
+        creator: req.user._id
     });
 
     todo.save().then((doc) => {
@@ -28,9 +29,9 @@ app.post('/todos', (req, res) => {
 });
 
 // GET /todos
-// Returns all todos
-app.get('/todos', (req, res) => {
-    Todo.find().then((todos) => {
+// Returns todos that belongs to logged in user
+app.get('/todos', authenticate, (req, res) => {
+    Todo.find({creator: req.user._id}).then((todos) => {
         res.send({ status: 'OK', todos });
     }, (err) => {
         res.status(400).send(err);
@@ -39,7 +40,7 @@ app.get('/todos', (req, res) => {
 
 // GET /todos/:id
 // Return todo with given ID
-app.get('/todos/:id', (req, res) => {
+app.get('/todos/:id', authenticate, (req, res) => {
 
     var id = req.params.id;
 
@@ -52,7 +53,11 @@ app.get('/todos/:id', (req, res) => {
         });
     }
 
-    Todo.findById(req.params.id).then((todo) => {
+    Todo.findOne({
+        _id: req.params.id,
+        creator: req.user._id
+    })
+    .then((todo) => {
         if (!todo) {
             return res.status(404).send({
                 status: 'NOT_FOUND',
@@ -70,7 +75,7 @@ app.get('/todos/:id', (req, res) => {
 
 // DELETE /todos/:id
 // Deletes todo with given ID
-app.delete('/todos/:id', (req, res) => {
+app.delete('/todos/:id', authenticate, (req, res) => {
     var id = req.params.id;
 
     if (!ObjectID.isValid(id)) {
@@ -82,7 +87,10 @@ app.delete('/todos/:id', (req, res) => {
         });
     }
 
-    Todo.findByIdAndRemove(id).then((deletedTodo) => {
+    Todo.findOneAndRemove({
+        _id: id, 
+        creator: req.user._id
+    }).then((deletedTodo) => {
         if (!deletedTodo) {
             return res.status(404).send({
                 status: 'NOT_FOUND',
@@ -98,9 +106,9 @@ app.delete('/todos/:id', (req, res) => {
     });
 });
 
-// DELETE /todos/:id
-// Deletes todo with given ID
-app.patch('/todos/:id', (req, res) => {
+// PATCH /todos/:id
+// Updates todo with given ID
+app.patch('/todos/:id', authenticate, (req, res) => {
     var id = req.params.id;
     var body = _.pick(req.body, ['text', 'completed']);
 
@@ -120,7 +128,10 @@ app.patch('/todos/:id', (req, res) => {
         body.completedAt = null;
     }
 
-    Todo.findByIdAndUpdate(id, { $set: body }, { new: true }).then((todo) => {
+    Todo.findOneAndUpdate({
+        _id: id, 
+        creator: req.user._id 
+    }, { $set: body }, { new: true }).then((todo) => {
         if (!todo) {
             return res.status(404).send({
                 status: 'NOT_FOUND',
