@@ -25,24 +25,17 @@ const users = [{
     }]
 }];
 
-const populateUsers = (done) => {
-    User.remove({}).then(() => {
-        var user1 = new User(users[0]).save();
-        var user2 = new User(users[1]).save();
-
-        Promise.all([user1, user2])
-            .then(() => { done(); })
-            .catch((e) => done(e));
-    }).catch((e) => {
-        done(e);
-    });
+const populateUsers = async () => {
+    await User.remove({});
+    var user1 = await new User(users[0]).save();
+    var user2 = await new User(users[1]).save();
 };
 
 var completedTimeStamp = Date.now();
 
 var todos = [
     {
-         _id: new ObjectID(), 
+        _id: new ObjectID(),
         text: 'First test todo',
         creator: user1ID
     },
@@ -54,17 +47,9 @@ var todos = [
     }
 ]
 
-const populateTodos = (done) => {
-    Todo.remove({}).then(() => {
-        return Todo.insertMany(todos);
-    }, (err) => {
-        console.log('Could not clear todos before testing.', err);
-    })
-        .then(() => {
-            done();
-        }, (err) => {
-            console.log('Unable to seed todos before testing.', err);
-        });
+const populateTodos = async () => {
+    await Todo.remove({});
+    await Todo.insertMany(todos);
 };
 
 module.exports = { todos, users, populateTodos, populateUsers }

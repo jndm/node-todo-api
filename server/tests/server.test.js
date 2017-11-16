@@ -24,18 +24,18 @@ describe('POST /todos', () => {
             .expect((res) => {
                 expect(res.body.text).toBe(text);
             })
-            .end((err, res) => {
+            .end(async (err, res) => {
                 if (err) {
                     return done(err);
                 }
-                Todo.find().then((todos) => {
+                try {
+                    var todos = await Todo.find();
                     expect(todos.length).toBe(3);
                     expect(todos[2].text).toBe(text);
                     done();
-                }, (err) => {
-                    console.log('Error at fetching todos.')
-                })
-                    .catch((e) => { done(e) });
+                } catch (error) {
+                    done(error);
+                }
             });
     });
 
@@ -48,23 +48,23 @@ describe('POST /todos', () => {
             .expect((res) => {
                 expect(res.body.text).toBe(undefined);
             })
-            .end((err, res) => {
+            .end(async (err, res) => {
                 if (err) {
                     return done(err);
                 }
-                Todo.find().then((todos) => {
+                try {
+                    var todos = await Todo.find();
                     expect(todos.length).toBe(2);
                     done();
-                }, (err) => {
-                    console.log('Error at fetching todos.')
-                })
-                    .catch((e) => { done(e) });
+                } catch (error) {
+                    done(error);
+                }
             })
     });
 });
 
 //
-// DELETE /todos
+// GET /todos
 describe('GET /todos', () => {
     it('should get all todos', (done) => {
         request(app)
@@ -138,15 +138,18 @@ describe('DELETE /todos/:id', () => {
                 expect(res.body.status).toBe('OK');
                 expect(res.body.deletedTodo._id).toBe(todos[0]._id.toHexString());
             })
-            .end((err, res) => {
+            .end(async (err, res) => {
                 if (err) {
                     return done(err);
                 }
 
-                Todo.findById(todos[0]._id).then((todo) => {
+                try {
+                    var todo = await Todo.findById(todos[0]._id);
                     expect(todo).toBe(null);
                     done();
-                }).catch(done);
+                } catch (error) {
+                    done(error);
+                }
             });
     });
 
@@ -158,15 +161,17 @@ describe('DELETE /todos/:id', () => {
             .expect((res) => {
                 expect(res.body.status).toBe('NOT_FOUND');
             })
-            .end((err, res) => {
+            .end(async (err, res) => {
                 if (err) {
                     return done(err);
                 }
-
-                Todo.findById(todos[1]._id).then((todo) => {
+                try {
+                    var todo = await Todo.findById(todos[1]._id);
                     expect(todo).toBeTruthy();
                     done();
-                }).catch(done);
+                } catch (error) {
+                    done(error);
+                }
             });
     });
 
@@ -207,19 +212,19 @@ describe('PATCH /todos/:id', () => {
                 completed: true
             })
             .expect(200)
-            .end((err, res) => {
+            .end(async (err, res) => {
                 if (err) {
                     return done(err);
                 }
-                Todo.findById(todos[0]._id).then((todo) => {
+                try {
+                    var todo = await Todo.findById(todos[0]._id);
                     expect(todo.text).toBe(updatedText);
                     expect(todo.completed).toBe(true);
                     expect(typeof (todo.completedAt)).toBe('object');
                     done();
-                }, (err) => {
-                    console.log('Error at fetching todos.')
-                })
-                    .catch((e) => { done(e) });
+                } catch (error) {
+                    done(error);
+                }
             });
     });
 
@@ -234,18 +239,18 @@ describe('PATCH /todos/:id', () => {
                 completed: false
             })
             .expect(404)
-            .end((err, res) => {
+            .end(async (err, res) => {
                 if (err) {
                     return done(err);
                 }
-                Todo.findById(todos[1]._id).then((todo) => {
+                try {
+                    var todo = await Todo.findById(todos[1]._id);
                     expect(todo.text).toBe(todos[1].text);
                     expect(todo.completed).toBe(true);
                     done();
-                }, (err) => {
-                    console.log('Error at fetching todos.')
-                })
-                .catch((e) => { done(e) });
+                } catch (error) {
+                    done(error);
+                }
             });
     });
 
@@ -259,19 +264,19 @@ describe('PATCH /todos/:id', () => {
                 completed: false
             })
             .expect(200)
-            .end((err, res) => {
+            .end(async (err, res) => {
                 if (err) {
                     return done(err);
                 }
-                Todo.findById(todos[1]._id).then((todo) => {
+                try {
+                    var todo = await Todo.findById(todos[1]._id);
                     expect(todo.text).toBe(updatedText);
                     expect(todo.completed).toBe(false);
                     expect(todo.completedAt).toBe(null);
                     done();
-                }, (err) => {
-                    console.log('Error at fetching todos.')
-                })
-                    .catch((e) => { done(e) });
+                } catch (error) {
+                    done(error);
+                }
             });
     });
 });
@@ -318,17 +323,18 @@ describe('POST /users', () => {
                 expect(typeof (res.body._id)).toBeTruthy();
                 expect(res.body.email).toBe(email);
             })
-            .end((err) => {
+            .end(async (err) => {
                 if (err) {
                     return done(err);
                 }
-
-                User.findOne({ email }).then((user) => {
+                try {
+                    var user = await User.findOne({ email });
                     expect(user).toBeTruthy();
                     expect(user.password).not.toBe(password);
                     done();
-                })
-                    .catch((e) => done(e));
+                } catch (error) {
+                    done(error);
+                }
             });
     });
 
@@ -351,16 +357,18 @@ describe('POST /users', () => {
             .post('/users')
             .send({ _id: id, email: users[0].email, password })
             .expect(400)
-            .end((err) => {
+            .end(async (err) => {
                 if (err) {
                     return done(err);
                 }
 
-                User.findOne({ id }).then((user) => {
+                try {
+                    var user = await User.findOne({ id });
                     expect(user).toBeFalsy();
                     done();
-                })
-                    .catch((e) => done(e));
+                } catch (error) {
+                    done(error);
+                }
             });
     });
 });
@@ -377,18 +385,21 @@ describe('POST /users/login', () => {
             .expect((res) => {
                 expect(res.headers['x-auth']).toBeTruthy();
             })
-            .end((err, res) => {
+            .end(async (err, res) => {
                 if (err) {
                     return done(err);
                 }
 
-                User.findById(users[1]._id).then((user) => {
+                try {
+                    var user = await User.findById(users[1]._id);
                     expect(user.toObject().tokens[1]).toMatchObject({
                         access: 'auth',
                         token: res.headers['x-auth']
                     });
                     done();
-                }).catch((e) => done(e));
+                } catch (error) {
+                    done(error);
+                }
             });
     });
 
@@ -404,15 +415,18 @@ describe('POST /users/login', () => {
                 expect(res.headers['x-path']).toBeFalsy();
                 expect(res.body).toEqual({});
             })
-            .end((err, res) => {
+            .end(async (err, res) => {
                 if (err) {
                     return done(err);
                 }
 
-                User.findById(users[1]._id).then((user) => {
+                try {
+                    var user = await User.findById(users[1]._id);
                     expect(user.tokens.length).toBe(1);
                     done();
-                }).catch((e) => done(e));
+                } catch (error) {
+                    done(error);
+                }
             });
     });
 });
@@ -423,15 +437,18 @@ describe('DELETE /users/me/token', () => {
             .delete('/users/me/token')
             .set('x-auth', users[0].tokens[0].token)
             .expect(200)
-            .end((err, res) => {
+            .end(async (err, res) => {
                 if (err) {
                     return done(err);
                 }
 
-                User.findById(users[0]._id).then((user) => {
+                try {
+                    var user = await User.findById(users[0]._id);
                     expect(user.tokens.length).toBe(0);
                     done();
-                }).catch((e) => done(e));
+                } catch (error) {
+                    done(error);
+                }
             });
     });
 });
